@@ -4,7 +4,6 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-psycopg-binary = "==2.8.6"
 django-rest-framework = "==0.1.0"
 django-allauth = "==0.44.0"
 django-rest-swagger = "==2.2.0"

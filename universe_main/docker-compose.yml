@@ -1,0 +1,35 @@
+version: '3.7'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    command: python manage.py runserver 0.0.0.0:8000
+    environment:
+      - "DEBUG=1"
+      - "SECRET_KEY=django-insecure-*=0zst%67@cb9vq7d4_cmwsrw4js3kgk*)^@pg8(@w599*@w3!"
+      - "POSTGRES_USER=postgres"
+      - "POSTGRES_PASSWORD=postgres"
+
+    ports:
+      - "8000:8000"
+
+    volumes:
+      - '.:/app'
+
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:13
+    environment:
+      - "POSTGRES_USER=postgres"
+      - "POSTGRES_PASSWORD=postgres"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
