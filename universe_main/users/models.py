@@ -5,11 +5,11 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 
-from .validators import max_image_size
+from .validators import image_max_resolution_validator, image_size_validator
 
 
 class UserManager(BaseUserManager):
-    def create_user(self, email:str = None, first_name:str = None, last_name:str = None, birth_date:str = None, avatar:object = None, about_me:str = None, password:str = None):
+    def create_user(self, email:str = None, first_name:str = None, surname:str = None, birth_date:str = None, avatar:object = None, about_me:str = None, password:str = None):
         if not email:
             raise ValueError('Users must have an email address')
 
@@ -17,7 +17,7 @@ class UserManager(BaseUserManager):
         user = self.model(
             email = self.normalize_email(email),
             first_name = first_name,
-            last_name = last_name,
+            surname = surname,
             birth_date = birth_date,
             avatar = avatar,
             about_me = about_me
@@ -28,9 +28,6 @@ class UserManager(BaseUserManager):
         return user
 
     def create_superuser(self, email, password = None):
-        if not email:
-            raise ValueError('Users must have an email address')
-
         user = self.create_user(email, password)
 
 
@@ -55,14 +52,13 @@ class User(AbstractBaseUser):
     )
     first_name  = models.CharField('First name', max_length = 255, blank = True, null = True)
 
-    last_name   = models.CharField('Last name', max_length = 255, blank = True, null = True)
+    surname   = models.CharField('Surname', max_length = 255, blank = True, null = True)
 
     birth_date  = models.DateField('Birth date', blank = True, null = True)
 
     avatar      = models.ImageField(
         verbose_name    = 'Avatar',
         upload_to       = 'users/avatars/',
-        validators      = [max_image_size(300,300),],
         blank           = True,
         null            = True
     )
@@ -75,3 +71,16 @@ class User(AbstractBaseUser):
 
 
     objects = UserManager()
+
+    USERNAME_FIELD = 'email'
+
+    def __str__(self):
+        print(self.email)
+        return self.email
+
+    def validate_image(image:object) -> None:
+        image_max_resolution_validator(image, 500, 500)
+
+        image_size_validator(image, 5.0)
+
+        return None
