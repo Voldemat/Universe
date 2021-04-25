@@ -10,7 +10,7 @@ def get_image_by_url(url:str) -> object:
 
     image_data = open(response[0])
 
-    image = File(image_data)
+    image = File(image_data, 'rb')
 
     return image
 

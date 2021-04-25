@@ -1,6 +1,7 @@
 """
     User global model
 """
+import uuid
 
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
@@ -28,7 +29,7 @@ class UserManager(BaseUserManager):
         return user
 
     def create_superuser(self, email, password = None):
-        user = self.create_user(email, password)
+        user = self.create_user(email = email, password = password)
 
 
         user.is_admin = True
@@ -44,7 +45,14 @@ class UserManager(BaseUserManager):
 
 
 
-class User(AbstractBaseUser):
+class User(AbstractBaseUser, models.Model):
+    id = models.UUIDField(
+        primary_key = True,
+        default = uuid.uuid4,
+        editable = False,
+        db_index = True
+    )
+
     email       = models.EmailField(
         verbose_name    = 'Email Address',
         max_length      = 255,
@@ -75,7 +83,6 @@ class User(AbstractBaseUser):
     USERNAME_FIELD = 'email'
 
     def __str__(self):
-        print(self.email)
         return self.email
 
     def validate_image(image:object) -> None:
@@ -84,3 +91,24 @@ class User(AbstractBaseUser):
         image_size_validator(image, 5.0)
 
         return None
+
+
+    def has_perm(self, perm, obj=None):
+        "Does the user have a specific permission?"
+        # Simplest possible answer: Yes, always
+        return True
+
+    def has_module_perms(self, app_label):
+        "Does the user have permissions to view the app `app_label`?"
+        # Simplest possible answer: Yes, always
+        return True
+
+
+class Check(models.Model):
+    id      = models.UUIDField(
+        primary_key = True,
+        default = uuid.uuid4,
+        db_index = True,
+        editable = False
+    )
+    title = models.CharField(max_length = 10)
