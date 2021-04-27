@@ -3,10 +3,9 @@
 """
 import uuid
 
+
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
-
-from .validators import image_max_resolution_validator, image_size_validator
 
 
 class UserManager(BaseUserManager):
