@@ -43,6 +43,7 @@ INSTALLED_APPS = [
 
     # 3-rd party
     'rest_framework',
+    'rest_framework.authtoken',
     'rest_framework_swagger',
 
     # local ...
@@ -88,12 +89,15 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'postgres',
-        'HOST':'postgres',
+        'HOST':'db',
         'USER':os.getenv('POSTGRES_USER'),
         'PASSWORD':os.getenv('POSTGRES_PASSWORD'),
         'PORTS':5432
     }
 }
+
+REDIS_HOST = 'redis'
+REDIS_PORT = 6379
 
 
 # Password validation
