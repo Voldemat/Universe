@@ -29,10 +29,14 @@ class Redis(redis.StrictRedis):
         if 'json' in kwargs:
             value = str(value)
 
+            del kwargs['json']
+
         if 'prefix' in kwargs:
             name = kwargs['prefix'] + ':' + str(name)
             
-        super().set(name, value)
+            del kwargs['prefix']
+            
+        super().set(name, value, **kwargs)
 
         return None
 
