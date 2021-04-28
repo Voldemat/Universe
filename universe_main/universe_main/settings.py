@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     # local ...
     'users.apps.UsersConfig',
     'api_v1.apps.ApiV1Config',
+    'modules.apps.ModulesConfig',
 ]
 
 MIDDLEWARE = [

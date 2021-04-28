@@ -10,6 +10,8 @@ from api_v1.cache import redis_db as redis
 from api_v1.serializers import UserSerializer
 from api_v1.permissions import UserObjOrReadOnly
 
+from modules.utils import get_db_table_name
+
 
 class UserViewSet(ModelViewSet):
     queryset = get_user_model().objects.all()
@@ -28,15 +30,30 @@ def cache_api(request):
         if not user_id:
             return JsonResponse({'error':"Id is not defined"}, status = 400)
 
-        if redis.get(user_id, prefix = 'users_user'):
-            user = redis.get(user_id, prefix = 'users_user')
+
+        user = redis.get(
+            user_id,
+            json = True,
+            prefix = get_db_table_name( get_user_model() )
+        )
+        if user:
             print('redis',user)
             return JsonResponse({str(user_id):user}, status = 200)
         else:
             user = get_user_model().objects.get(id = user_id)
-            redis.set(name = user_id, value = UserSerializer(user).data, json = True, prefix = 'users_user')
+
+            user_json = UserSerializer(user).data
+            redis.set(
+                name = user_id,
+                value = user_json,
+                json = True,
+                prefix = get_db_table_name( get_user_model() )
+            )
+            
+
             print('django', user)
-            return JsonResponse({str(user.id):user.email}, status = 200)
+
+            return JsonResponse({str(user.id):user_json}, status = 200)
 
         
     return JsonResponse({"error":"method must be post"}, status = 400)
