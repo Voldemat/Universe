@@ -2,20 +2,25 @@ import json
 
 from django.http import JsonResponse
 
-from django.contrib.auth import get_user_model
-from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth            import get_user_model
+from django.views.decorators.csrf   import csrf_exempt
 
-from rest_framework.viewsets import ModelViewSet
-from rest_framework.generics import get_object_or_404
-from rest_framework.response import Response
-from rest_framework.authtoken.views import ObtainAuthToken
-from rest_framework.authtoken.models import Token
+from rest_framework.viewsets            import ModelViewSet
+from rest_framework.generics            import get_object_or_404
+from rest_framework.response            import Response
+from rest_framework.authtoken.views     import ObtainAuthToken
+from rest_framework.authtoken.models    import Token
 
-from api_v1.cache import redis_db as redis
+from api_v1.cache       import redis_db as redis
 from api_v1.serializers import UserSerializer
 from api_v1.permissions import UserObjOrReadOnly
 
 from modules.utils import get_db_table_name
+
+"""
+    User endpoint with override retrieve method
+    to cache user objects in redis.
+"""
 
 
 class UserViewSet(ModelViewSet):
@@ -25,100 +30,79 @@ class UserViewSet(ModelViewSet):
         UserObjOrReadOnly,
     )
 
-    def get_object(self):
-        """
-        Returns the object the view is displaying.
-        You may want to override this if you need to provide non-standard
-        queryset lookups.  Eg if objects are referenced using multiple
-        keyword arguments in the url conf.
-        """
-        queryset = self.filter_queryset(self.get_queryset())
-
-        # Perform the lookup filtering.
-        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
-
-        assert lookup_url_kwarg in self.kwargs, (
-            'Expected view %s to be called with a URL keyword argument '
-            'named "%s". Fix your URL conf, or set the `.lookup_field` '
-            'attribute on the view correctly.' %
-            (self.__class__.__name__, lookup_url_kwarg)
-        )
-
-        filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
-
-        obj = get_object_or_404(queryset, **filter_kwargs)
-
-
-        # May raise a permission denied
-        self.check_object_permissions(self.request, obj)
-
-        return obj
-
     def retrieve(self, request, *args, **kwargs):
-        user_id = self.kwargs['pk']
+        # get user_id
+        user_id:str = self.kwargs['pk']
 
-        obj_json = redis.get(
+        # get json object from redis
+        obj_json:dict = redis.get(
             user_id,
             json = True,
             prefix = get_db_table_name( get_user_model() )
         )
-        status = 200
-        if not obj_json:
-            obj = self.get_object()
-            serializer = self.get_serializer(obj)
-            obj_json = serializer.data
 
+        # if json object does not exist
+        if not obj_json:
+
+            # get object from db
+            obj:object          = self.get_object()
+
+            # parse it into json
+            serializer:object   = self.get_serializer(obj)
+            obj_json:dict       = serializer.data
+
+            # set json object into redis db
             redis.set(
                 name = obj_json['id'],
                 value = obj_json,
                 json = True,
                 prefix = get_db_table_name( get_user_model() ),
+                # ex = expiry
                 ex = 60
             )
-            status = 201
 
         return Response(obj_json, status = status)
 
 
 class TokenAuthentication(ObtainAuthToken):
     def post(self, request, *args, **kwargs):
-
-        serializer = self.serializer_class(
+        # get serializer instance
+        serializer:object = self.serializer_class(
             data = request.data,
             context = {"request":request}
         )
 
+        # validating...
         serializer.is_valid(raise_exception = True)
 
-        user = serializer.validated_data['user']
+        # get user object
+        user:object = serializer.validated_data['user']
 
+        # get or create Token for current user
         token, created = Token.objects.get_or_create(user = user)
 
-        return Response({
-            'token':token.key,
-            'user_id':user.pk
-        })
+        return Response( { 'token':token.key }, status = 201 if created else 200)
 
 
 @csrf_exempt
-def cache_api(request):
+def cache_api(request:object) -> object:
     if request.method == 'POST' and request.is_ajax:
-        data = json.loads(request.body.decode('UTF-8'))
+        data:dict = json.loads(request.body.decode('UTF-8'))
 
-        user_id = data['id']
+        user_id:str = data['id']
 
         if not user_id:
             return JsonResponse({'error':"Id is not defined"}, status = 400)
 
 
-        user = redis.get(
+        user:dict = redis.get(
             user_id,
             json = True,
             prefix = get_db_table_name( get_user_model() )
         )
         if user:
-            print('redis',user)
             return JsonResponse({'redis':user}, status = 200)
+
         else:
             user = get_user_model().objects.get(id = user_id)
 
@@ -132,9 +116,6 @@ def cache_api(request):
                 ex = 10
             )
             
-
-            print('django', user)
-
             return JsonResponse({'django':user_json}, status = 200)
 
         
