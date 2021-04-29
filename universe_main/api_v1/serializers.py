@@ -7,3 +7,7 @@ class UserSerializer(ModelSerializer):
         model = get_user_model()
         exclude = ['last_login', 'is_active', 'is_staff', 'is_admin']
         extra_kwargs = {'password': {'write_only': True}}
+
+    def create(self, validated_data):
+        obj = get_user_model().objects.create_user(**validated_data)
+        return obj
