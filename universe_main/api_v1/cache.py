@@ -47,6 +47,23 @@ class Redis(redis.StrictRedis):
         # call parent set method with additional kwargs
         super().set(name, value, **kwargs)
 
+    def save(self, name:str, prefix:str, change_list:dict, *args:list, **kwargs:dict) -> None:
+        # get obj from redis
+        obj_json = self.get(name = name, prefix = prefix, json = True)
+
+        # change some values
+        for field, value in change_list.items():
+            if field in obj_json.keys():
+                obj_json[field] = value
+            else:
+                raise ValueError(f'{ field } field does not exist!')
+
+
+        self.set(name = name, value = obj_json, prefix = prefix, json = True)
+
+        return None
+
+
 redis_db = Redis(
     host = settings.REDIS_HOST,
     port = settings.REDIS_PORT,
