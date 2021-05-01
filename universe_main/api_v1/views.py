@@ -30,6 +30,20 @@ class UserViewSet(ModelViewSet):
         UserObjOrReadOnly,
     )
 
+
+    def list(self, request):
+        datalist = redis.get_list(prefix = 'users_user', json = True)
+        status = 200
+        if not datalist:
+            queryset = self.get_queryset()
+            print('ss')
+            datalist = UserSerializer(queryset, many=True).data
+
+            redis.set_list(prefix = 'users_user', datalist = datalist, ex = 10)
+
+            status = 201
+        return Response(datalist, status = status)
+
     def retrieve(self, request, *args, **kwargs):
         # get user_id
         user_id:str = self.kwargs['pk']
@@ -61,7 +75,7 @@ class UserViewSet(ModelViewSet):
                 ex = 60
             )
 
-        return Response(obj_json, status = status)
+        return Response(obj_json)
 
 
 class TokenAuthentication(ObtainAuthToken):

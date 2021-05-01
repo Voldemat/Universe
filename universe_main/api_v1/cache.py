@@ -1,7 +1,7 @@
 import redis
 import json
 
-from typing import Optional, Union
+from typing import Optional, Union, List
 
 
 from django.conf import settings
@@ -11,7 +11,7 @@ from modules.utils import str_to_json
 
 
 class Redis(redis.StrictRedis):
-    def get(self, name:str, **kwargs:dict) -> Optional[str]:
+    def get(self:object, name:str, **kwargs:dict) -> Optional[str]:
         if 'prefix' in kwargs:
             # add prefix to name "prefix:name" ex. "users_user:1d259df6-3e38-4h2b-13gb-51d0c3ctee01"
             name = kwargs['prefix'] + ':' + str(name)
@@ -29,7 +29,7 @@ class Redis(redis.StrictRedis):
 
         return value
 
-    def set(self, name:str, value:Union[str, dict], **kwargs:dict) -> None:
+    def set(self:object, name:str, value:Union[str, dict], **kwargs:dict) -> None:
         if 'json' in kwargs:
             # stringify json format
             value = str(value)
@@ -47,21 +47,35 @@ class Redis(redis.StrictRedis):
         # call parent set method with additional kwargs
         super().set(name, value, **kwargs)
 
-    def save(self, name:str, prefix:str, change_list:dict, *args:list, **kwargs:dict) -> None:
-        # get obj from redis
-        obj_json = self.get(name = name, prefix = prefix, json = True)
+    def get_all(self:object, prefix:str, *args:list, **kwargs:dict) -> Optional[list]:
+        all_obj = list(self.scan_iter(f'{prefix}:*'))
 
-        # change some values
-        for field, value in change_list.items():
-            if field in obj_json.keys():
-                obj_json[field] = value
-            else:
-                raise ValueError(f'{ field } field does not exist!')
+        if 'json' in kwargs and kwargs['json'] == True:
+            # serialize all str objects to json dictionary
+            for obj in all_obj:
+                obj:dict = str_to_json(obj.decode('UTF-8'))
 
+        return all_obj
 
-        self.set(name = name, value = obj_json, prefix = prefix, json = True)
+    def set_list(self:object, prefix:str, datalist:List[dict], *args:list, **kwargs:dict) -> None:
+        value = str(datalist)
+        name = prefix + '_list'
+
+        redis.set(
+            name = name,
+            value = value,
+            ex = 10,
+            **kwargs,
+        )
 
         return None
+
+    def get_list(self:object, prefix:str, *args:list, **kwargs:dict) -> Optional[   List[dict]  ]:
+        name:str = prefix + '_list'
+
+        datalist:List[dict] = str_to_json( self.get(name = name) )
+
+        return datalist # list of json objects
 
 
 redis_db = Redis(
