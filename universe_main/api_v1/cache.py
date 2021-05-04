@@ -1,7 +1,7 @@
 import redis
 import json
 
-from typing import Optional, Union, List
+from typing import Optional, Union
 
 
 from django.conf import settings
@@ -57,23 +57,27 @@ class Redis(redis.StrictRedis):
 
         return all_obj
 
-    def set_list(self:object, prefix:str, datalist:List[dict], *args:list, **kwargs:dict) -> None:
-        value = str(datalist)
-        name = prefix + '_list'
+    def set_list(self:object, prefix:str, datalist:list[dict], *args:list, **kwargs:dict) -> None:
+        # serialize datalist into json
+        value:str = json.dumps(datalist)
 
-        redis.set(
+        name:str = prefix + '_list'
+
+        self.set(
             name = name,
             value = value,
-            ex = 10,
             **kwargs,
         )
 
         return None
 
-    def get_list(self:object, prefix:str, *args:list, **kwargs:dict) -> Optional[   List[dict]  ]:
+    def get_list(self:object, prefix:str, *args:list, **kwargs:dict) -> Optional[   list[dict]  ]:
         name:str = prefix + '_list'
 
-        datalist:List[dict] = str_to_json( self.get(name = name) )
+        redis_value = self.get(name = name)
+
+        print(redis_value)
+        datalist:list[dict] = str_to_json( redis_value )
 
         return datalist # list of json objects
 

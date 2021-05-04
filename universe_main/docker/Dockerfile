@@ -11,7 +11,7 @@ ADD . /app
 
 RUN pip install pipenv --upgrade --no-cache-dir
 
-RUN pipenv install --system --deploy
+RUN pipenv install --system --deploy --dev
 
 
 

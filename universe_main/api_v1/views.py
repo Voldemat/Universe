@@ -32,14 +32,21 @@ class UserViewSet(ModelViewSet):
 
 
     def list(self, request):
+        # get redis obj or None
         datalist = redis.get_list(prefix = 'users_user', json = True)
         status = 200
+
+        # if redis obj does not exist
         if not datalist:
             queryset = self.get_queryset()
             print('ss')
-            datalist = UserSerializer(queryset, many=True).data
+            datalist = self.get_serializer(queryset, many = True).data
 
-            redis.set_list(prefix = 'users_user', datalist = datalist, ex = 10)
+            redis.set_list(
+                prefix = 'users_user',
+                datalist = datalist,
+                ex = 10
+            )
 
             status = 201
         return Response(datalist, status = status)

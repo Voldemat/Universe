@@ -1,18 +1,26 @@
 import json
-from typing import Optional
+
+from typing import Optional, Union
+from users.models import User
 
 def get_db_table_name(model:object) -> str:
     return model.objects.model._meta.db_table
 
 
-def str_to_json(string:str) -> Optional[dict]:
-    if not string:
+def str_to_json(value:str) -> Optional[dict]:
+    if not value:
         return None
 
-    string = string.replace("\'",'\"')
+    value = value.replace("\'",'\"')
 
-    string = string.replace("None", "null")
+    value = value.replace("None", "null")
 
-    result = json.loads(string)
+    result = json.loads(value)
 
     return result
+
+
+
+
+
+
