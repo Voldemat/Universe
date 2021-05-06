@@ -5,20 +5,21 @@ from typing import Optional, Union
 
 
 from django.conf import settings
+from django.db.models import Model
 
 from api_v1.serializers import UserSerializer
 from modules.utils import str_to_json
 
 
 class Redis(redis.StrictRedis):
-    def get(self:object, name:str, **kwargs:dict) -> Optional[str]:
+    def get(self, name:str, **kwargs:dict) -> Optional[str]:
         if 'prefix' in kwargs:
             # add prefix to name "prefix:name" ex. "users_user:1d259df6-3e38-4h2b-13gb-51d0c3ctee01"
             name = kwargs['prefix'] + ':' + str(name)
 
         try:
             # get value from redis and decode it
-            value = super().get(name).decode('UTF-8')
+            value = super(self).get(name).decode('UTF-8')
         except AttributeError:
             # if value does not exist return None
             return None
@@ -29,7 +30,7 @@ class Redis(redis.StrictRedis):
 
         return value
 
-    def set(self:object, name:str, value:Union[str, dict], **kwargs:dict) -> None:
+    def set(self, name:str, value:Union[str, dict], **kwargs:dict) -> None:
         if 'json' in kwargs:
             # stringify json format
             value = str(value)
@@ -45,19 +46,21 @@ class Redis(redis.StrictRedis):
             del kwargs['prefix']
             
         # call parent set method with additional kwargs
-        super().set(name, value, **kwargs)
+        super(self).set(name, value, **kwargs)
 
-    def get_all(self:object, prefix:str, *args:list, **kwargs:dict) -> Optional[list]:
-        all_obj = list(self.scan_iter(f'{prefix}:*'))
+    def get_all(self, prefix:str, *args:list, **kwargs:dict) -> Optional[list]:
+        all_obj:list[str] = list(self.scan_iter(f'{prefix}:*'))
 
         if 'json' in kwargs and kwargs['json'] == True:
             # serialize all str objects to json dictionary
+            obj:str
             for obj in all_obj:
+                # serialize object to json
                 obj:dict = str_to_json(obj.decode('UTF-8'))
 
         return all_obj
 
-    def set_list(self:object, prefix:str, datalist:list[dict], *args:list, **kwargs:dict) -> None:
+    def set_list(self, prefix:str, datalist:list[dict], *args:list, **kwargs:dict) -> None:
         # serialize datalist into json
         value:str = json.dumps(datalist)
 
@@ -71,7 +74,7 @@ class Redis(redis.StrictRedis):
 
         return None
 
-    def get_list(self:object, prefix:str, *args:list, **kwargs:dict) -> Optional[   list[dict]  ]:
+    def get_list(self, prefix:str, *args:list, **kwargs:dict) -> Optional[   list[dict]  ]:
         name:str = prefix + '_list'
 
         redis_value = self.get(name = name)

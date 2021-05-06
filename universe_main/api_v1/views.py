@@ -1,6 +1,6 @@
 import json
 
-from django.http import JsonResponse
+from django.http import JsonResponse, QueryDict
 
 from django.contrib.auth            import get_user_model
 from django.views.decorators.csrf   import csrf_exempt
@@ -24,9 +24,9 @@ from modules.utils import get_db_table_name
 
 
 class UserViewSet(ModelViewSet):
-    queryset = get_user_model().objects.all()
+    queryset:QueryDict = get_user_model().objects.all()
     serializer_class = UserSerializer
-    permission_classes = (
+    permission_classes:list[type] = (
         UserObjOrReadOnly,
     )
 
@@ -38,14 +38,13 @@ class UserViewSet(ModelViewSet):
 
         # if redis obj does not exist
         if not datalist:
-            queryset = self.get_queryset()
-            print('ss')
+            queryset:QueryDict = self.get_queryset()
             datalist = self.get_serializer(queryset, many = True).data
 
             redis.set_list(
                 prefix = 'users_user',
                 datalist = datalist,
-                ex = 10
+                ex = 60
             )
 
             status = 201
@@ -66,11 +65,11 @@ class UserViewSet(ModelViewSet):
         if not obj_json:
 
             # get object from db
-            obj:object          = self.get_object()
+            obj:User          = self.get_object()
 
             # parse it into json
-            serializer:object   = self.get_serializer(obj)
-            obj_json:dict       = serializer.data
+            serializer:UserSerializer   = self.get_serializer(obj)
+            obj_json:dict               = serializer.data
 
             # set json object into redis db
             redis.set(
@@ -87,6 +86,8 @@ class UserViewSet(ModelViewSet):
 
 class TokenAuthentication(ObtainAuthToken):
     def post(self, request, *args, **kwargs):
+
+        help = "Handle POST request and get or create token from user credentials"
         # get serializer instance
         serializer:object = self.serializer_class(
             data = request.data,
@@ -97,9 +98,11 @@ class TokenAuthentication(ObtainAuthToken):
         serializer.is_valid(raise_exception = True)
 
         # get user object
-        user:object = serializer.validated_data['user']
+        user:User = serializer.validated_data['user']
 
         # get or create Token for current user
+        token:Token
+        created:bool
         token, created = Token.objects.get_or_create(user = user)
 
         return Response( { 'token':token.key }, status = 201 if created else 200)
@@ -133,6 +136,7 @@ def cache_api(request:object) -> object:
                 name = user_id,
                 value = user_json,
                 json = True,
+                # for users.models.User return 'users_user'
                 prefix = get_db_table_name( get_user_model() ),
                 ex = 10
             )
